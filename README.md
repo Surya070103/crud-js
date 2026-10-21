@@ -1,10 +1,10 @@
 CRUD Application
 
-A simple CRUD application built using React.js for the frontend and Node.js for the backend.
+A simple CRUD application built using  Node.js for the backend.
 
 Technologies
 
-Frontend: React.js
+
 
 Backend: Node.js, 
 Features
