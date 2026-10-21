@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CRUD UI</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f4f7f6;
+      color: #1d1d1d;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      margin: 0;
+    }
+
+    .btn {
+      border: none;
+      padding: 10px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .btn-primary {
+      background: #0d9488;
+      color: white;
+    }
+
+    .btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+      padding: 20px;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    label {
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    input {
+      padding: 10px 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+
+    #status {
+      min-height: 0;
+      margin-top: 12px;
+      padding: 0;
+      border-radius: 8px;
+      font-size: 14px;
+      opacity: 0;
+      transform: translateY(-6px);
+      transition: opacity 180ms ease, transform 180ms ease, padding 180ms ease;
+    }
+
+    #status.show {
+      padding: 10px 12px;
+      opacity: 1;
+      transform: translateY(0);
+      background: #e6f7f4;
+    }
+
+    #status.error {
+      background: #fef0f0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 12px 10px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    th {
+      background: #f9fafb;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .small-btn {
+      padding: 7px 10px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .edit-btn {
+      background: #dbeafe;
+      color: #1d4ed8;
+    }
+
+    .delete-btn {
+      background: #fee2e2;
+      color: #b91c1c;
+    }
+
+    .empty {
+      text-align: center;
+      color: #6b7280;
+      padding: 20px;
+    }
+
+    @media (max-width: 760px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <div class="topbar">
+      <h1>Users CRUD</h1>
+      <button id="refreshBtn" class="btn btn-primary">Refresh</button>
+    </div>
+
+    <div class="layout">
+      <div class="card">
+        <h2 id="formTitle">Add User</h2>
+        <form id="userForm">
+          <input type="hidden" id="userId" />
+
+          <div>
+            <label for="name">Name</label>
+            <input id="name" type="text" placeholder="Enter name" required />
+          </div>
+
+          <div>
+            <label for="age">Age</label>
+            <input id="age" type="number" placeholder="Enter age" required />
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="submitBtn">Save User</button>
+          <button type="button" class="btn" id="cancelBtn" style="display:none;">Cancel</button>
+        </form>
+        <div id="status"></div>
+      </div>
+
+      <div class="card">
+        <h2>All Users</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Age</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="userTableBody"></tbody>
+        </table>
+        <div id="emptyState" class="empty" hidden>No users found.</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const userForm = document.getElementById('userForm');
+    const userTableBody = document.getElementById('userTableBody');
+    const emptyState = document.getElementById('emptyState');
+    const status = document.getElementById('status');
+    const formTitle = document.getElementById('formTitle');
+    const cancelBtn = document.getElementById('cancelBtn');
+    const submitBtn = document.getElementById('submitBtn');
+
+
+
+    function showStatus(message, isError = false) {
+      status.textContent = message;
+
+    }
+
+    function resetForm() {
+      userForm.reset();
+      document.getElementById('userId').value = '';
+      formTitle.textContent = 'Add User';
+      submitBtn.textContent = 'Save User';
+      cancelBtn.style.display = 'none';
+    }
+
+    async function loadUsers() {
+      try {
+        const res = await fetch(`${API_URL}/users`);
+        if (!res.ok) throw new Error('Could not load users.');
+        const users = await res.json();
+
+        if (!users.length) {
+          userTableBody.innerHTML = '';
+          emptyState.hidden = false;
+          return;
+        }
+
+        emptyState.hidden = true;
+        userTableBody.innerHTML = users.map(user => `
+        <tr>
+          <td>${user.id}</td>
+          <td>${user.name}</td>
+          <td>${user.age}</td>
+          <td>
+            <div class="actions">
+              <button class="small-btn edit-btn" data-id="${user.id}">Edit</button>
+              <button class="small-btn delete-btn" data-delete-id="${user.id}">Delete</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+      } catch (error) {
+        showStatus('Cannot connect to the server. Start crud.js first.', true);
+      }
+    }
+
+    userForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const id = document.getElementById('userId').value;
+      const name = document.getElementById('name').value.trim();
+      const age = Number(document.getElementById('age').value);
+
+      if (!name || !age) {
+        showStatus('Please fill in all fields.', true);
+        return;
+      }
+
+      const method = id ? 'PUT' : 'POST';
+      const url = id ? `http://localhost:3000/users/${id}` : 'http://localhost:3000/users';
+
+      try {
+        const res = await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, age })
+        });
+
+        if (!res.ok) throw new Error('Request failed.');
+
+        showStatus(id ? 'User updated successfully.' : 'User added successfully.');
+        resetForm();
+        loadUsers();
+      } catch (error) {
+        showStatus('Cannot save user. Start crud.js first.', true);
+      }
+    });
+
+    userTableBody.addEventListener('click', async (e) => {
+      const editId = e.target.dataset.id;
+      const deleteId = e.target.dataset.deleteId;
+
+      if (editId) {
+        const res = await fetch(`${API_URL}/users`);
+        const users = await res.json();
+        const user = users.find(u => u.id === Number(editId));
+
+        if (user) {
+          document.getElementById('userId').value = user.id;
+          document.getElementById('name').value = user.name;
+          document.getElementById('age').value = user.age;
+          formTitle.textContent = 'Edit User';
+          submitBtn.textContent = 'Update User';
+          cancelBtn.style.display = 'inline-block';
+          showStatus('Editing user ' + user.name + '.');
+        }
+      }
+
+      if (deleteId) {
+        const confirmDelete = confirm('Are you sure you want to delete this user?');
+        if (!confirmDelete) return;
+
+        try {
+          const res = await fetch(`${API_URL}/users/${deleteId}`, {
+            method: 'DELETE'
+          });
+
+          if (!res.ok) throw new Error('Delete failed.');
+
+          showStatus('User deleted successfully.');
+          resetForm();
+          loadUsers();
+        } catch (error) {
+          showStatus('Cannot delete user. Start crud.js first.', true);
+        }
+      }
+    });
+
+    cancelBtn.addEventListener('click', resetForm);
+    document.getElementById('refreshBtn').addEventListener('click', loadUsers);
+
+    loadUsers();
+  </script>
+</body>
+
+</html>
