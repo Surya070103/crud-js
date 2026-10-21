@@ -1,4 +1,19 @@
+CRUD Application
 
+A simple CRUD application built using React.js for the frontend and Node.js for the backend.
 
-A small CRUD demo using a Node.js HTTP server and a browser-based user form.
+Technologies
+
+Frontend: React.js
+
+Backend: Node.js, 
+Features
+
+Create user records
+
+View user records
+
+Update user records
+
+Delete user records
 
